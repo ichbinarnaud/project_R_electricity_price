@@ -12,6 +12,7 @@ package.check <- lapply(
 dir = dirname(rstudioapi::getSourceEditorContext()$path)
 setwd(dir)
 
+
 file_names = list.files()
 file_list  = list()
 
@@ -28,9 +29,15 @@ spain_price             = list()
 germany_price           = list()
 netherlands_price       = list()
 
+
 spain_generation        = list()
 germany_generation      = list()
 netherlands_generation  = list()
+france_generation       = list()
+belgium_generation      = list()
+portugal_generation     = list()
+
+
 
 
 for (i in (file_list)){
@@ -42,6 +49,12 @@ for (i in (file_list)){
   }
   if (grepl("Forecast_netherlands", i, fixed=TRUE)){
     netherlands_generation[length(netherlands_generation)+1]=i
+  }
+  if (grepl("Forecast_france", i, fixed=TRUE)){
+    france_generation[length(france_generation)+1]=i
+  }
+  if (grepl("Forecast_belgium", i, fixed=TRUE)){
+    belgium_generation[length(belgium_generation)+1]=i
   }
 }
 
@@ -101,7 +114,11 @@ spain_generation       = generation_data_processing(spain_generation)
 
 germany_generation     = generation_data_processing(germany_generation)
 
+france_generation      = generation_data_processing(france_generation)
+
 netherlands_generation = generation_data_processing(netherlands_generation)
+
+belgium_generation     = generation_data_processing(belgium_generation)
 
 
 
@@ -163,11 +180,11 @@ VE_names_list<-list("VE_austria",
 
 
 for (i in 1:length(VE_list)){
-    VE_list[[i]]$end<-NULL
-    VE_list[[i]]$start<-as.POSIXlt(VE_list[[i]]$start,tz="CET",'%Y-%m-%d %H:%M')
-    colnames(VE_list[[i]])[2]<-paste0('load_',VE_names_list[[i]])
-    VE_list[[i]]<-VE_list[[i]][VE_list[[i]]$start$min==0,]
-    rownames(VE_list[[i]])<-1:nrow(VE_list[[i]])
+    VE_list[[i]]$end          <- NULL
+    VE_list[[i]]$start        <- as.POSIXlt(VE_list[[i]]$start,tz="CET",'%Y-%m-%d %H:%M')
+    colnames(VE_list[[i]])[2] <- paste0('load_',VE_names_list[[i]])
+    VE_list[[i]]              <- VE_list[[i]][VE_list[[i]]$start$min==0,]
+    rownames(VE_list[[i]])    <- 1:nrow(VE_list[[i]])
     
 }
 
@@ -178,28 +195,30 @@ load_variables <- VE_list[[1]]
 for (i in 2:length(VE_list)){
   print(nrow(load_variables))
 
-  VE_distinct <- VE_list[[i]] %>% distinct(start, .keep_all = TRUE)
-  load_variables<-inner_join(load_variables, VE_distinct, by = c("start" = "start"))
+  VE_distinct    <- VE_list[[i]] %>% distinct(start, .keep_all = TRUE)
+  load_variables <-inner_join(load_variables, VE_distinct, by = c("start" = "start"))
 }
 
 
 
-germany_price$Day.ahead.Price..EUR.MWh.<-as.numeric(germany_price$Day.ahead.Price..EUR.MWh.)
+germany_price$Day.ahead.Price..EUR.MWh. <- as.numeric(germany_price$Day.ahead.Price..EUR.MWh.)
 
-germany_price<-na.omit(germany_price)
-spain_price<-na.omit(spain_price)
-netherlands_price<-na.omit(netherlands_price)
+germany_price     <- na.omit(germany_price)
+spain_price       <- na.omit(spain_price)
+netherlands_price <- na.omit(netherlands_price)
 
 
-netherlands_generation$Scheduled.Generation..MW...D....BZN.NL <- as.numeric(netherlands_generation$Scheduled.Generation..MW...D....BZN.N) 
+netherlands_generation$Scheduled.Generation..MW...D....BZN.NL <- as.numeric(netherlands_generation$Scheduled.Generation..MW...D....BZN.N ) 
 spain_generation$Scheduled.Generation..MW...D....BZN.ES       <- as.numeric(spain_generation$Scheduled.Generation..MW...D....BZN.ES )
+france_generation$Scheduled.Generation..MW...D....BZN.FR      <- as.numeric(france_generation$Scheduled.Generation..MW...D....BZN.FR  )
 
 
 
-germany_generation<-na.omit(germany_generation)
-spain_generation<-na.omit(spain_generation)
-netherlands_generation<-na.omit(netherlands_generation)
-
+germany_generation     <- na.omit(germany_generation)
+spain_generation       <- na.omit(spain_generation)
+netherlands_generation <- na.omit(netherlands_generation)
+france_generation      <- na.omit(france_generation)
+belgium_generation     <- na.omit(belgium_generation)
 
 
 
@@ -225,18 +244,28 @@ colnames(all_datasets)[colnames(all_datasets)=="Scheduled.Generation..MW...D....
 all_datasets<-inner_join(all_datasets,netherlands_generation, by = c("start"="MTU") )
 colnames(all_datasets)[colnames(all_datasets)=="Scheduled.Generation..MW...D....BZN.NL"]<-"netherlands_generation"
 
+all_datasets<-inner_join(all_datasets,france_generation, by = c("start"="MTU") )
+colnames(all_datasets)[colnames(all_datasets)=="Scheduled.Generation..MW...D....BZN.FR"]<-"france_generation"
+
+
+all_datasets<-inner_join(all_datasets,belgium_generation, by = c("start"="MTU") )
+colnames(all_datasets)[colnames(all_datasets)=="Scheduled.Generation..MW...D....BZN.BE"]<-"belgium_generation"
+
+
+
+
 
 df<-all_datasets
 
 
-df['day']<-format (x=df$start,format= "%A")
-df['month']<-format(x=df$start,format= "%B")
-df['hour']<-format(x=df$start,format= "%H")
+df['day']   <- format (x=df$start,format= "%A")
+df['month'] <- format(x=df$start,format= "%B")
+df['hour']  <- format(x=df$start,format= "%H")
 
 
-day_list<-unique(df['day'])
-month_list<-unique(df['month'])
-hour_list<-unique(df['hour'])
+day_list   <- unique(df['day'])
+month_list <- unique(df['month'])
+hour_list  <- unique(df['hour'])
 
 day_function<-function(x,day){
   if  (x==day){
@@ -263,15 +292,17 @@ for ( i in (1:nrow(hour_list))){
 }
 
 
-unique(df$hour)
-
-df<- df[colnames(df)!="month"]
-df<- df[colnames(df)!="day"]
-df<- df[colnames(df)!="hour"]
+df <- df[colnames(df)!="month"]
+df <- df[colnames(df)!="day"]
+df <- df[colnames(df)!="hour"]
 
 
-df<-na.omit(df)
+df <- na.omit(df)
 nrow(df)
+
+colnames(df)[colnames(df)=="décembre"]<-"decembre"
+colnames(df)[colnames(df)=="février"]<-"fevrier"
+colnames(df)[colnames(df)=="août"]<-"aout"
 
 write.csv(df,"load_variables.csv", row.names = FALSE)
 
